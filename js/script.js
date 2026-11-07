@@ -1647,14 +1647,36 @@
 
     // Material Parallax
     if ( plugins.materialParallax.length ) {
-      if ( !isIE && !isMobile) {
-        plugins.materialParallax.parallax();
-      } else {
-        for ( var i = 0; i < plugins.materialParallax.length; i++ ) {
-          var $parallax = $(plugins.materialParallax[i]);
+      // Each section's background image is only requested once the section is within two
+      // viewports of the screen, so the hero image does not compete with every parallax
+      // background for bandwidth. Browsers without IntersectionObserver start them all at once.
+      var startParallax = function ( element ) {
+        var $parallax = $(element);
 
+        if ( !isIE && !isMobile ) {
+          $parallax.parallax();
+        } else {
           $parallax.addClass( 'parallax-disabled' );
           $parallax.css({ "background-image": 'url('+ $parallax.data("parallax-img") +')' });
+        }
+      };
+
+      if ( 'IntersectionObserver' in window ) {
+        var parallaxObserver = new IntersectionObserver( function ( entries ) {
+          entries.forEach( function ( entry ) {
+            if ( entry.isIntersecting ) {
+              parallaxObserver.unobserve( entry.target );
+              startParallax( entry.target );
+            }
+          });
+        }, { rootMargin: '200% 0px' } );
+
+        for ( var i = 0; i < plugins.materialParallax.length; i++ ) {
+          parallaxObserver.observe( plugins.materialParallax[i] );
+        }
+      } else {
+        for ( var j = 0; j < plugins.materialParallax.length; j++ ) {
+          startParallax( plugins.materialParallax[j] );
         }
       }
     }
